@@ -1,7 +1,10 @@
 package ui
 
 import (
+	"strconv"
+
 	"github.com/gdamore/tcell"
+	"github.com/nesorrosen/MTGCollectionManager/db"
 	"github.com/rivo/tview"
 )
 
@@ -85,10 +88,63 @@ func initViewPage() {
 }
 
 func initAddPage() {
+	card := &db.CardComplete{}
+
 	// Init logo
-	logoWidth, logoHeight, logoBox := LogoArt("MTG", "puffy")
+	logoWidth, logoHeight, logoBox := LogoArt("MTG", "isometric1")
 	logoFlex := Center(logoWidth, logoHeight, logoBox)
 
-	addCardPage.AddItem(logoFlex, 0, 1, false)
+	cardForm := tview.NewForm()
 
+	nameField := tview.NewInputField().
+		SetFieldWidth(20).
+		SetLabel("Card Name").
+		SetChangedFunc(func(text string) {
+			card.Name = text
+		})
+
+	amountField := tview.NewInputField().
+		SetFieldWidth(20).
+		SetLabel("Amount").
+		SetAcceptanceFunc(func(textToCheck string, lastChar rune) bool {
+			num, err := strconv.Atoi(textToCheck)
+			if err != nil {
+				return false
+			}
+			if num > 255 {
+				return false
+			}
+			return true
+		}).
+		SetChangedFunc(func(text string) {
+			num, _ := strconv.Atoi(text)
+			card.Amount = num
+		})
+
+	cardForm.AddFormItem(nameField)
+	cardForm.AddFormItem(amountField)
+	cardForm.
+		AddButton("Add Card", func() {
+			db.AddCard(card)
+		}).
+		AddButton("Cancel", func() {
+			addCardPage.Clear()
+			Pages.SwitchToPage("mainMenuPage")
+		})
+
+	formFrame := tview.NewFrame(cardForm).
+		AddText("Add Card Form", true, tview.AlignCenter, tcell.ColorWhite)
+
+	frameFlex := tview.NewFlex().
+		SetDirection(tview.FlexRow).
+		AddItem(logoFlex, logoHeight, 1, false).
+		AddItem(formFrame, 0, 1, true)
+
+	width := logoWidth
+	// height = logoHeight + number of primitives + (1 + number of textrows in the frame) + 2 * number of formitems + 1 because idk
+	height := logoHeight + 2 + (1 + 1) + 2*3 + 1
+
+	resFlex := Center(width, height, frameFlex)
+
+	addCardPage.AddItem(resFlex, 0, 1, true)
 }
